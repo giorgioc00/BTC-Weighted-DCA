@@ -1,28 +1,59 @@
 package strategy
 
-import "backtester/indicators"
+import (
+	"backtester/indicators"
+	"fmt"
+)
 
-// DCAConfig holds the configuration for the dynamic DCA strategy
 type DCAConfig struct {
-	ExecutionInterval int     // Interval for operation execution in days
-	BaseAmount        float64 // Base amount to invest per period
-	RSIPeriod         int     // RSI calculation period (typically 14)
-	RSIOversold       float64 // RSI level considered oversold (e.g., 30)
-	RSIOverbought     float64 // RSI level considered overbought (e.g., 70)
-	MaxMultiplier     float64 // Maximum multiplier for base amount
-	MinMultiplier     float64 // Minimum multiplier for base amount
+	RSI               RSIConfig
+	Weights           WeightsConfig
+	ExecutionInterval int // Interval for operation execution in days
+
+}
+
+type RSIConfig struct {
+	BaseAmount    float64 // Base amount to invest per period
+	RSIPeriod     int     // RSI calculation period (typically 14)
+	RSIOversold   float64 // RSI level considered oversold (e.g., 30)
+	RSIOverbought float64 // RSI level considered overbought (e.g., 70)
+	MaxMultiplier float64 // Maximum multiplier for base amount
+	MinMultiplier float64 // Minimum multiplier for base amount
+}
+type WeightsConfig struct {
+	RSI          int
+	FearAndGreed int
+	MVRM         int
+	Ma200        int
+}
+
+// Validate checks that the weights sum to 100
+func (w *WeightsConfig) Validate() error {
+	total := w.RSI + w.FearAndGreed + w.MVRM + w.Ma200
+	if total != 100 {
+		return fmt.Errorf("weights must sum to 100, got %d", total)
+	}
+	return nil
 }
 
 // DefaultConfig returns a sensible default configuration
 func DefaultConfig() DCAConfig {
 	return DCAConfig{
+		RSI: RSIConfig{
+			BaseAmount:    100.0,
+			RSIPeriod:     14,
+			RSIOversold:   25.0,
+			RSIOverbought: 75.0,
+			MaxMultiplier: 3.0,
+			MinMultiplier: 0.5,
+		},
+		Weights: WeightsConfig{
+			RSI:          40,
+			FearAndGreed: 30,
+			MVRM:         20,
+			Ma200:        10,
+		},
 		ExecutionInterval: 30,
-		BaseAmount:        100.0,
-		RSIPeriod:         14,
-		RSIOversold:       25.0,
-		RSIOverbought:     75.0,
-		MaxMultiplier:     3.0,
-		MinMultiplier:     0.5,
 	}
 }
 
