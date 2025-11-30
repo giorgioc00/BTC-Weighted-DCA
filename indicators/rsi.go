@@ -30,7 +30,7 @@ func RSI(prices []float64, period int) []float64 {
 	}
 
 	// STEP 2: Calculate initial average gain and loss (Simple Moving Average)
-	var avgPeriodGain, avgPeriodLoss float64
+	var avgPeriodGain, avgPeriodLoss float64 // for the last period
 	for i := 1; i <= period; i++ {
 		avgPeriodGain += gains[i]
 		avgPeriodLoss += losses[i]
@@ -50,10 +50,9 @@ func RSI(prices []float64, period int) []float64 {
 		if avgPeriodLoss == 0 {
 			rsi[i] = 100
 		} else {
-			rs := avgPeriodGain / avgPeriodLoss
-			rsi[i] = 100 - (100 / (1 + rs))
+			relativeStrength := avgPeriodGain / avgPeriodLoss
+			rsi[i] = 100 - (100 / (1 + relativeStrength))
 		}
 	}
-
 	return rsi
 }
