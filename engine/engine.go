@@ -43,7 +43,7 @@ func NewEngine(strat *strategy.DynamicDCA) *Engine {
 
 // Run executes the backtest on the given price series
 func (e *Engine) Run(prices []float64) *Result {
-	signals := e.Strategy.GenerateSignals(prices)
+	signals := e.Strategy.GenerateSignalsRSI(prices)
 	if signals == nil {
 		return nil
 	}
@@ -62,7 +62,7 @@ func (e *Engine) Run(prices []float64) *Result {
 		}
 
 		// Skip initial period where RSI isn't reliable
-		if i < e.Strategy.Config.RSIPeriod {
+		if i < e.Strategy.Config.RSI.RSIPeriod {
 			continue
 		}
 
