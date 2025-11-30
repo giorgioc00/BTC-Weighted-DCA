@@ -63,32 +63,78 @@ type DynamicDCA struct {
 }
 
 // NewDynamicDCA creates a new dynamic DCA strategy
-func NewDynagmicDCA(config DCAConfig) *DynamicDCA {
+func NewDynamicDCA(config DCAConfig) *DynamicDCA {
 	return &DynamicDCA{Config: config}
 }
 
-// CalculateInvestmentAmount determines how much to invest based on RSI
-// When RSI is low (oversold), invest more. When RSI is high (overbought), invest less.
+// CalculateScore takes all the different indicators and create a weighted score
+func (d *DynamicDCA) CalculateScore(rsi float64) float64 {
+
+}
+
+// CalculateInvestmentAmount CalculateInvestmentAmountRSI determines how much to invest based on the weighted score
 func (d *DynamicDCA) CalculateInvestmentAmount(rsi float64) float64 {
-	if rsi <= d.Config.RSIOversold {
+	if rsi <= d.Config.RSI.RSIOversold {
 		// RSI is oversold - invest maximum
-		return d.Config.BaseAmount * d.Config.MaxMultiplier
-	} else if rsi >= d.Config.RSIOverbought {
+		return d.Config.RSI.BaseAmount * d.Config.RSI.MaxMultiplier
+	} else if rsi >= d.Config.RSI.RSIOverbought {
 		// RSI is overbought - invest minimum
-		return d.Config.BaseAmount * d.Config.MinMultiplier
+		return d.Config.RSI.BaseAmount * d.Config.RSI.MinMultiplier
 	}
 
 	// Linear interpolation between oversold and overbought
 	// Lower RSI = higher multiplier
-	rsiRange := d.Config.RSIOverbought - d.Config.RSIOversold
-	multiplierRange := d.Config.MaxMultiplier - d.Config.MinMultiplier
-	rsiPosition := (rsi - d.Config.RSIOversold) / rsiRange
+	rsiRange := d.Config.RSI.RSIOverbought - d.Config.RSI.RSIOversold
+	multiplierRange := d.Config.RSI.MaxMultiplier - d.Config.RSI.MinMultiplier
+	rsiPosition := (rsi - d.Config.RSI.RSIOversold) / rsiRange
 
-	multiplier := d.Config.MaxMultiplier - (rsiPosition * multiplierRange)
-	return d.Config.BaseAmount * multiplier
+	multiplier := d.Config.RSI.MaxMultiplier - (rsiPosition * multiplierRange)
+	return d.Config.RSI.BaseAmount * multiplier
+}
+
+// CalculateInvestmentAmountRSI determines how much to invest based on RSI
+// When RSI is low (oversold), invest more. When RSI is high (overbought), invest less.
+func (d *DynamicDCA) CalculateInvestmentAmountRSI(rsi float64) float64 {
+	if rsi <= d.Config.RSI.RSIOversold {
+		// RSI is oversold - invest maximum
+		return d.Config.RSI.BaseAmount * d.Config.RSI.MaxMultiplier
+	} else if rsi >= d.Config.RSI.RSIOverbought {
+		// RSI is overbought - invest minimum
+		return d.Config.RSI.BaseAmount * d.Config.RSI.MinMultiplier
+	}
+
+	// Linear interpolation between oversold and overbought
+	// Lower RSI = higher multiplier
+	rsiRange := d.Config.RSI.RSIOverbought - d.Config.RSI.RSIOversold
+	multiplierRange := d.Config.RSI.MaxMultiplier - d.Config.RSI.MinMultiplier
+	rsiPosition := (rsi - d.Config.RSI.RSIOversold) / rsiRange
+
+	multiplier := d.Config.RSI.MaxMultiplier - (rsiPosition * multiplierRange)
+	return d.Config.RSI.BaseAmount * multiplier
 }
 
 // GenerateSignals generates buy signals with amounts for the entire price series
+func (d *DynamicDCA) GenerateSignalsRSI(prices []float64) []Signal {
+	rsiValues := indicators.RSI(prices, d.Config.RSI.RSIPeriod)
+	if rsiValues == nil {
+		return nil
+	}
+
+	signals := make([]Signal, len(prices))
+	for i := 0; i < len(prices); i++ {
+		signals[i] = Signal{
+			Index:  i,
+			Price:  prices[i],
+			RSI:    rsiValues[i],
+			Amount: d.CalculateInvestmentAmountRSI(rsiValues[i]),
+			Action: Buy, // DCA always buys
+		}
+	}
+
+	return signals
+}
+
+// For the ongoing weighted score
 func (d *DynamicDCA) GenerateSignals(prices []float64) []Signal {
 	rsiValues := indicators.RSI(prices, d.Config.RSIPeriod)
 	if rsiValues == nil {
@@ -101,6 +147,7 @@ func (d *DynamicDCA) GenerateSignals(prices []float64) []Signal {
 			Index:  i,
 			Price:  prices[i],
 			RSI:    rsiValues[i],
+			Score:  0,
 			Amount: d.CalculateInvestmentAmount(rsiValues[i]),
 			Action: Buy, // DCA always buys
 		}
@@ -114,8 +161,11 @@ type Signal struct {
 	Index  int
 	Price  float64
 	RSI    float64
+	Score  float64
 	Amount float64
 	Action Action
+}
+type Score struct {
 }
 
 // Action represents a trading action
