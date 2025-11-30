@@ -4,9 +4,8 @@ import (
 	"backtester/data"
 	"backtester/engine"
 	"backtester/strategy"
-	"encoding/json"
+	"backtester/util"
 	"fmt"
-	"io/ioutil"
 	"log"
 )
 
@@ -24,14 +23,10 @@ func main() {
 	fmt.Printf("Ending price: $%.2f\n", prices[len(prices)-1])
 
 	// Configure the dynamic DCA strategy by reading the rsi_config.json
-	content, err := ioutil.ReadFile("./rsi_config.json")
-	if err != nil {
-		log.Fatal("Error when opening file: ", err)
-	}
 	var config strategy.DCAConfig
-	err = json.Unmarshal(content, &config)
+	err = util.LoadJSONConfig("config/rsi_config.json", &config)
 	if err != nil {
-		log.Fatal("Error during Unmarshal(): ", err)
+		log.Fatal("Error loading config: ", err)
 	}
 
 	strat := strategy.NewDynamicDCA(config)
@@ -75,4 +70,5 @@ func compareWithStandardDCA(prices []float64, amount float64, interval int) {
 	fmt.Printf("  Final Value:    $%.2f\n", finalValue)
 	fmt.Printf("  Avg Cost Basis: $%.2f\n", avgCost)
 	fmt.Printf("  Total Return:   %.2f%%\n", returnPct)
+	fmt.Printf("  Profit/Loss:    $%.2f\n", finalValue-totalInvested)
 }
