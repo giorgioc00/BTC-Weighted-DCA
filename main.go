@@ -4,7 +4,9 @@ import (
 	"backtester/data"
 	"backtester/engine"
 	"backtester/strategy"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 )
 
@@ -21,15 +23,15 @@ func main() {
 	fmt.Printf("Starting price: $%.2f\n", prices[0])
 	fmt.Printf("Ending price: $%.2f\n", prices[len(prices)-1])
 
-	// Configure the dynamic DCA strategy
-	config := strategy.DCAConfig{
-		ExecutionInterval: 7,     // Buying weekly = every 7 days
-		BaseAmount:        100.0, // Base $100 per trade
-		RSIPeriod:         14,    // 14-period RSI
-		RSIOversold:       30.0,  // Buy more when RSI < 30
-		RSIOverbought:     70.0,  // Buy less when RSI > 70
-		MaxMultiplier:     3.0,   // Up to 3x base amount when oversold
-		MinMultiplier:     0.5,   // 0.5x base amount when overbought
+	// Configure the dynamic DCA strategy by reading the rsi_config.json
+	content, err := ioutil.ReadFile("./rsi_config.json")
+	if err != nil {
+		log.Fatal("Error when opening file: ", err)
+	}
+	var config strategy.DCAConfig
+	err = json.Unmarshal(content, &config)
+	if err != nil {
+		log.Fatal("Error during Unmarshal(): ", err)
 	}
 
 	strat := strategy.NewDynamicDCA(config)
