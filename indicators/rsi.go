@@ -14,7 +14,7 @@ func RSI(prices []float64, period int) []float64 {
 		rsi[i] = 50 // neutral RSI for insufficient data
 	}
 
-	// Calculate price changes
+	// STEP 1: Calculate price changes
 	gains := make([]float64, len(prices))
 	losses := make([]float64, len(prices))
 
@@ -29,26 +29,28 @@ func RSI(prices []float64, period int) []float64 {
 		}
 	}
 
-	// Calculate initial average gain and loss
-	var avgGain, avgLoss float64
+	// STEP 2: Calculate initial average gain and loss (Simple Moving Average)
+	var avgPeriodGain, avgPeriodLoss float64
 	for i := 1; i <= period; i++ {
-		avgGain += gains[i]
-		avgLoss += losses[i]
+		avgPeriodGain += gains[i]
+		avgPeriodLoss += losses[i]
 	}
-	avgGain /= float64(period)
-	avgLoss /= float64(period)
+	avgPeriodGain /= float64(period)
+	avgPeriodLoss /= float64(period)
 
-	// Calculate RSI using smoothed moving average
+	// STEP 3 & 4: Calculate RSI using smoothed moving average
 	for i := period; i < len(prices); i++ {
+		// STEP 4: Apply smoothing for subsequent values (i > period)
 		if i > period {
-			avgGain = (avgGain*float64(period-1) + gains[i]) / float64(period)
-			avgLoss = (avgLoss*float64(period-1) + losses[i]) / float64(period)
+			avgPeriodGain = (avgPeriodGain*float64(period-1) + gains[i]) / float64(period)
+			avgPeriodLoss = (avgPeriodLoss*float64(period-1) + losses[i]) / float64(period)
 		}
+		// STEP 3: Calculate RSI (first at i=period uses initial averages)
 
-		if avgLoss == 0 {
+		if avgPeriodLoss == 0 {
 			rsi[i] = 100
 		} else {
-			rs := avgGain / avgLoss
+			rs := avgPeriodGain / avgPeriodLoss
 			rsi[i] = 100 - (100 / (1 + rs))
 		}
 	}
