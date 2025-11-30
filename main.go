@@ -48,7 +48,7 @@ func main() {
 
 	// Compare with standard DCA (fixed amount)
 	fmt.Println("\n--- Comparison with Standard DCA ---")
-	compareWithStandardDCA(prices, config.BaseAmount, 7)
+	compareWithStandardDCA(prices, config.RSI.BaseAmount, 7)
 }
 
 // compareWithStandardDCA runs a simple fixed-amount DCA for comparison
