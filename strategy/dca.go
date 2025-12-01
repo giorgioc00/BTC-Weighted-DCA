@@ -3,6 +3,7 @@ package strategy
 import (
 	"backtester/indicators"
 	"fmt"
+	"reflect"
 )
 
 type DCAConfig struct {
@@ -37,7 +38,14 @@ type WeightsConfig struct {
 
 // Validate checks that the weights sum to 100
 func (w *WeightsConfig) Validate() error {
-	total := w.RSI + w.FearAndGreed + w.MVRM + w.Ma200
+	v := reflect.ValueOf(*w)
+	total := 0
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		if field.Kind() == reflect.Int {
+			total += int(field.Int())
+		}
+	}
 	if total != 100 {
 		return fmt.Errorf("weights must sum to 100, got %d", total)
 	}
