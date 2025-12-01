@@ -7,9 +7,9 @@ import (
 
 type DCAConfig struct {
 	RSI               RSIConfig
+	Score             ScoreConfig
 	Weights           WeightsConfig
 	ExecutionInterval int // Interval for operation execution in days
-
 }
 
 type RSIConfig struct {
@@ -19,6 +19,14 @@ type RSIConfig struct {
 	RSIOverbought float64 // RSI level considered overbought (e.g., 70)
 	MaxMultiplier float64 // Maximum multiplier for base amount
 	MinMultiplier float64 // Minimum multiplier for base amount
+}
+
+type ScoreConfig struct {
+	BaseAmount      float64 // Base amount to invest per period for score-based strategy
+	ScoreOversold   float64 // Score threshold for "oversold" (e.g., 30)
+	ScoreOverbought float64 // Score threshold for "overbought" (e.g., 70)
+	MaxMultiplier   float64 // Maximum multiplier for base amount
+	MinMultiplier   float64 // Minimum multiplier for base amount
 }
 type WeightsConfig struct {
 	RSI          int
@@ -47,6 +55,13 @@ func DefaultConfig() DCAConfig {
 			MaxMultiplier: 3.0,
 			MinMultiplier: 0.5,
 		},
+		Score: ScoreConfig{
+			BaseAmount:      100.0,
+			ScoreOversold:   30.0,
+			ScoreOverbought: 70.0,
+			MaxMultiplier:   3.0,
+			MinMultiplier:   0.5,
+		},
 		Weights: WeightsConfig{
 			RSI:          40,
 			FearAndGreed: 30,
@@ -55,6 +70,14 @@ func DefaultConfig() DCAConfig {
 		},
 		ExecutionInterval: 30,
 	}
+}
+
+// IndicatorSet holds all indicator values for a single point in time
+type IndicatorSet struct {
+	RSI          float64
+	FearAndGreed float64
+	MVRM         float64
+	MA200        float64
 }
 
 // DynamicDCA implements a dynamic DCA strategy based on RSI
@@ -67,34 +90,58 @@ func NewDynamicDCA(config DCAConfig) *DynamicDCA {
 	return &DynamicDCA{Config: config}
 }
 
-// CalculateScore takes all the different indicators and create a weighted score
-func (d *DynamicDCA) CalculateScore(rsi float64) float64 {
+// calculateAllIndicators calculates all indicators for the entire price series
+func (d *DynamicDCA) calculateAllIndicators(prices []float64) []IndicatorSet {
+	rsiValues := indicators.RSI(prices, d.Config.RSI.RSIPeriod)
+	fearAndGreedValues := indicators.FearAndGreed(prices)
+	mvrmValues := indicators.MVRM(prices)
+	ma200Values := indicators.MA200(prices)
 
+	sets := make([]IndicatorSet, len(prices))
+	for i := 0; i < len(prices); i++ {
+		sets[i] = IndicatorSet{
+			RSI:          rsiValues[i],
+			FearAndGreed: fearAndGreedValues[i],
+			MVRM:         mvrmValues[i],
+			MA200:        ma200Values[i],
+		}
+	}
+	return sets
 }
 
-// CalculateInvestmentAmount CalculateInvestmentAmountRSI determines how much to invest based on the weighted score
-func (d *DynamicDCA) CalculateInvestmentAmount(rsi float64) float64 {
-	if rsi <= d.Config.RSI.RSIOversold {
-		// RSI is oversold - invest maximum
-		return d.Config.RSI.BaseAmount * d.Config.RSI.MaxMultiplier
-	} else if rsi >= d.Config.RSI.RSIOverbought {
-		// RSI is overbought - invest minimum
-		return d.Config.RSI.BaseAmount * d.Config.RSI.MinMultiplier
+// calculateScore takes an IndicatorSet and creates a weighted score
+func (d *DynamicDCA) calculateScore(indicators IndicatorSet) float64 {
+	score := indicators.RSI * float64(d.Config.Weights.RSI) / 100.0
+	score += indicators.FearAndGreed * float64(d.Config.Weights.FearAndGreed) / 100.0
+	score += indicators.MVRM * float64(d.Config.Weights.MVRM) / 100.0
+	score += indicators.MA200 * float64(d.Config.Weights.Ma200) / 100.0
+
+	return score
+}
+
+// calculateInvestmentAmount determines how much to invest based on the weighted score
+func (d *DynamicDCA) calculateInvestmentAmount(score float64) float64 {
+	if score <= d.Config.Score.ScoreOversold {
+		// Score is oversold - invest maximum
+		return d.Config.Score.BaseAmount * d.Config.Score.MaxMultiplier
+	} else if score >= d.Config.Score.ScoreOverbought {
+		// Score is overbought - invest minimum
+		return d.Config.Score.BaseAmount * d.Config.Score.MinMultiplier
 	}
 
 	// Linear interpolation between oversold and overbought
-	// Lower RSI = higher multiplier
-	rsiRange := d.Config.RSI.RSIOverbought - d.Config.RSI.RSIOversold
-	multiplierRange := d.Config.RSI.MaxMultiplier - d.Config.RSI.MinMultiplier
-	rsiPosition := (rsi - d.Config.RSI.RSIOversold) / rsiRange
+	// Lower score = higher multiplier
+	scoreRange := d.Config.Score.ScoreOverbought - d.Config.Score.ScoreOversold
+	multiplierRange := d.Config.Score.MaxMultiplier - d.Config.Score.MinMultiplier
+	scorePosition := (score - d.Config.Score.ScoreOversold) / scoreRange
 
-	multiplier := d.Config.RSI.MaxMultiplier - (rsiPosition * multiplierRange)
-	return d.Config.RSI.BaseAmount * multiplier
+	multiplier := d.Config.Score.MaxMultiplier - (scorePosition * multiplierRange)
+	return d.Config.Score.BaseAmount * multiplier
 }
 
-// CalculateInvestmentAmountRSI determines how much to invest based on RSI
+// calculateInvestmentAmountRSI determines how much to invest based on RSI
 // When RSI is low (oversold), invest more. When RSI is high (overbought), invest less.
-func (d *DynamicDCA) CalculateInvestmentAmountRSI(rsi float64) float64 {
+func (d *DynamicDCA) calculateInvestmentAmountRSI(rsi float64) float64 {
 	if rsi <= d.Config.RSI.RSIOversold {
 		// RSI is oversold - invest maximum
 		return d.Config.RSI.BaseAmount * d.Config.RSI.MaxMultiplier
@@ -113,7 +160,7 @@ func (d *DynamicDCA) CalculateInvestmentAmountRSI(rsi float64) float64 {
 	return d.Config.RSI.BaseAmount * multiplier
 }
 
-// GenerateSignals generates buy signals with amounts for the entire price series
+// GenerateSignalsRSI generates buy signals with amounts for the entire price series
 func (d *DynamicDCA) GenerateSignalsRSI(prices []float64) []Signal {
 	rsiValues := indicators.RSI(prices, d.Config.RSI.RSIPeriod)
 	if rsiValues == nil {
@@ -126,7 +173,7 @@ func (d *DynamicDCA) GenerateSignalsRSI(prices []float64) []Signal {
 			Index:  i,
 			Price:  prices[i],
 			RSI:    rsiValues[i],
-			Amount: d.CalculateInvestmentAmountRSI(rsiValues[i]),
+			Amount: d.calculateInvestmentAmountRSI(rsiValues[i]),
 			Action: Buy, // DCA always buys
 		}
 	}
@@ -134,21 +181,19 @@ func (d *DynamicDCA) GenerateSignalsRSI(prices []float64) []Signal {
 	return signals
 }
 
-// For the ongoing weighted score
+// GenerateSignals generates buy signals using weighted multi-indicator score
 func (d *DynamicDCA) GenerateSignals(prices []float64) []Signal {
-	rsiValues := indicators.RSI(prices, d.Config.RSIPeriod)
-	if rsiValues == nil {
-		return nil
-	}
+	indicatorSets := d.calculateAllIndicators(prices)
 
 	signals := make([]Signal, len(prices))
 	for i := 0; i < len(prices); i++ {
+		score := d.calculateScore(indicatorSets[i])
 		signals[i] = Signal{
 			Index:  i,
 			Price:  prices[i],
-			RSI:    rsiValues[i],
-			Score:  0,
-			Amount: d.CalculateInvestmentAmount(rsiValues[i]),
+			RSI:    indicatorSets[i].RSI, // TODO - Maybe to remove
+			Score:  score,
+			Amount: d.calculateInvestmentAmount(score),
 			Action: Buy, // DCA always buys
 		}
 	}
