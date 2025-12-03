@@ -2,7 +2,7 @@ package main
 
 import (
 	"backtester/data"
-	"backtester/engine"
+	backtester "backtester/engine"
 	"backtester/strategy"
 	"backtester/util"
 	"fmt"
@@ -11,16 +11,26 @@ import (
 
 func main() {
 	// Load BTC price data from CSV
-	prices, err := data.LoadPricesFromCSV("data/btc.csv")
+	prices, err := data.LoadPricesFromCSV("data/btc_price.csv")
 	if err != nil {
 		log.Fatal("Error loading CSV:", err)
 	}
 
-	fmt.Println("Dynamic DCA Backtester with RSI")
-	fmt.Println("================================")
+	// Load MVRV data from CSV
+	mvrvData, err := util.LoadCSVColumn("data/btc_mvrv.csv", "CapMVRVCur", false)
+	if err != nil {
+		log.Printf("Warning: Could not load MVRV data: %v (using fallback)\n", err)
+		mvrvData = nil
+	}
+
+	fmt.Println("Dynamic DCA Backtester with Multi-Indicator Score")
+	fmt.Println("==================================================")
 	fmt.Printf("Data points: %d\n", len(prices))
 	fmt.Printf("Starting price: $%.2f\n", prices[0])
 	fmt.Printf("Ending price: $%.2f\n", prices[len(prices)-1])
+	if mvrvData != nil {
+		fmt.Printf("MVRV data loaded: %d points\n", len(mvrvData))
+	}
 
 	// Configure the dynamic DCA strategy by reading the rsi_config.json
 	var config strategy.DCAConfig
@@ -30,6 +40,7 @@ func main() {
 	}
 
 	strat := strategy.NewDynamicDCA(config)
+	strat.MVRVData = mvrvData
 
 	// Create and run the backtester
 	engine := backtester.NewEngine(strat)
