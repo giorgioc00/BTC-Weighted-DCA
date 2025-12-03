@@ -43,7 +43,7 @@ func NewEngine(strat *strategy.DynamicDCA) *Engine {
 
 // Run executes the backtest on the given price series
 func (e *Engine) Run(prices []float64) *Result {
-	signals := e.Strategy.GenerateSignalsRSI(prices)
+	signals := e.Strategy.GenerateSignals(prices)
 	if signals == nil {
 		return nil
 	}
