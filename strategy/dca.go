@@ -90,7 +90,8 @@ type IndicatorSet struct {
 
 // DynamicDCA implements a dynamic DCA strategy based on RSI
 type DynamicDCA struct {
-	Config DCAConfig
+	Config   DCAConfig
+	MVRVData []float64 // Pre-loaded MVRV ratios from CSV
 }
 
 // NewDynamicDCA creates a new dynamic DCA strategy
@@ -110,7 +111,7 @@ func (d *DynamicDCA) calculateAllIndicators(prices []float64) []IndicatorSet {
 		sets[i] = IndicatorSet{
 			RSI:          rsiValues[i],
 			FearAndGreed: fearAndGreedValues[i],
-			MVRM:         mvrmValues[i],
+			MVRM:         mvrvValues[i],
 			MA200:        ma200Values[i],
 		}
 	}
@@ -138,7 +139,7 @@ func (d *DynamicDCA) calculateInvestmentAmount(score float64) float64 {
 	}
 
 	// Linear interpolation between oversold and overbought
-	// Lower score = higher multiplier
+	// Lower score = higher multiplier | Inverse linear proportion
 	scoreRange := d.Config.Score.ScoreOverbought - d.Config.Score.ScoreOversold
 	multiplierRange := d.Config.Score.MaxMultiplier - d.Config.Score.MinMultiplier
 	scorePosition := (score - d.Config.Score.ScoreOversold) / scoreRange
