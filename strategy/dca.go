@@ -103,7 +103,19 @@ func NewDynamicDCA(config DCAConfig) *DynamicDCA {
 func (d *DynamicDCA) calculateAllIndicators(prices []float64) []IndicatorSet {
 	rsiValues := indicators.RSI(prices, d.Config.RSI.RSIPeriod)
 	fearAndGreedValues := indicators.FearAndGreed(prices)
-	mvrmValues := indicators.MVRM(prices)
+
+	// Use pre-loaded MVRV data if available, otherwise use stub
+	var mvrvValues []float64
+	if len(d.MVRVData) == len(prices) {
+		mvrvValues = indicators.MVRV(d.MVRVData)
+	} else {
+		// Fallback to neutral values if MVRV data not loaded
+		mvrvValues = make([]float64, len(prices))
+		for i := range mvrvValues {
+			mvrvValues[i] = 50.0
+		}
+	}
+
 	ma200Values := indicators.MA200(prices)
 
 	sets := make([]IndicatorSet, len(prices))
