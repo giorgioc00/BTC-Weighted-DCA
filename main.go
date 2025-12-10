@@ -33,10 +33,14 @@ func main() {
 	}
 
 	// Configure the dynamic DCA strategy by reading the rsi_config.json
-	var config strategy.DCAConfig
+	config := strategy.DefaultConfig()
 	err = util.LoadJSONConfig("config/rsi_config.json", &config)
 	if err != nil {
 		log.Fatal("Error loading config: ", err)
+	}
+
+	if err := config.Weights.Validate(); err != nil {
+		log.Fatal("Invalid weights configuration: ", err)
 	}
 
 	strat := strategy.NewDynamicDCA(config)
