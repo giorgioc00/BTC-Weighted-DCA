@@ -1,9 +1,0 @@
-{
-    "ExecutionInterval": 7,
-    "BaseAmount": 100.0,
-    "RSIPeriod": 14,
-    "RSIOversold": 30.0,
-    "RSIOverbought": 70.0,
-    "MaxMultiplier": 3.0,
-    "MinMultiplier": 0.5
-}
