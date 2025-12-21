@@ -1,6 +1,10 @@
 {
-  "RSI": 40,
-  "FearAndGreed": 30,
-  "MVRM": 20,
-  "Ma200": 10
+  "RSI": 25,
+  "FearAndGreed": 15,
+  "MVRV": 15,
+  "MA200": 10,
+  "Bollinger": 10,
+  "ATR": 10,
+  "NetFlow": 10,
+  "VolumeFlow": 5
 }
