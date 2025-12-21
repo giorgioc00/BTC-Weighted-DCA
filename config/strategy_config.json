@@ -1,0 +1,45 @@
+{
+  "ExecutionInterval": 7,
+  "RSI": {
+    "BaseAmount": 100.0,
+    "RSIPeriod": 14,
+    "RSIOversold": 30.0,
+    "RSIOverbought": 70.0,
+    "MaxMultiplier": 3.0,
+    "MinMultiplier": 0.5
+  },
+  "Score": {
+    "BaseAmount": 100.0,
+    "ScoreOversold": 30.0,
+    "ScoreOverbought": 70.0,
+    "MaxMultiplier": 3.0,
+    "MinMultiplier": 0.5
+  },
+  "Bollinger": {
+    "Period": 20,
+    "Multiplier": 2.0
+  },
+  "ATR": {
+    "Period": 14,
+    "LowVolPct": 2.0,
+    "HighVolPct": 10.0
+  },
+  "NetFlow": {
+    "Period": 30,
+    "ZCap": 3.0
+  },
+  "VolumeFlow": {
+    "Period": 20,
+    "ZCap": 3.0
+  },
+  "Weights": {
+    "RSI": 25,
+    "FearAndGreed": 15,
+    "MVRV": 15,
+    "MA200": 10,
+    "Bollinger": 10,
+    "ATR": 10,
+    "NetFlow": 10,
+    "VolumeFlow": 5
+  }
+}
