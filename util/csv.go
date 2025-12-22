@@ -8,8 +8,7 @@ import (
 	"strings"
 )
 
-// LoadCSVColumnWithDefault reads a specific column by name and substitutes defaultVal
-// for missing or invalid entries. Values can be reversed to chronological order.
+// LoadCSVColumnWithDefault reads a column with default values for missing/invalid entries
 func LoadCSVColumnWithDefault(filepath string, columnName string, reverse bool, defaultVal float64) ([]float64, error) {
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -81,8 +80,7 @@ func LoadCSVColumnWithDefault(filepath string, columnName string, reverse bool, 
 	return values, nil
 }
 
-// LoadCSVVolumeColumn reads a volume column with suffixes (K/M/B) and returns values.
-// Set reverse to true to order chronologically (oldest first).
+// LoadCSVVolumeColumn reads volume column with K/M/B suffixes
 func LoadCSVVolumeColumn(filepath string, columnName string, reverse bool) ([]float64, error) {
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -167,8 +165,7 @@ func LoadCSVVolumeColumn(filepath string, columnName string, reverse bool) ([]fl
 	return values, nil
 }
 
-// LoadCSVColumn reads a specific column from a CSV file by column name
-// Returns values in chronological order (oldest first) by reversing the data
+// LoadCSVColumn reads a column from CSV by name
 func LoadCSVColumn(filepath string, columnName string, reverse bool) ([]float64, error) {
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -176,14 +173,13 @@ func LoadCSVColumn(filepath string, columnName string, reverse bool) ([]float64,
 	}
 	defer file.Close()
 
-	// Skip BOM if present
 	br := bufio.NewReader(file)
 	r, _, err := br.ReadRune()
 	if err != nil {
 		return nil, err
 	}
 	if r != '\uFEFF' {
-		br.UnreadRune() // Not a BOM, put it back
+		br.UnreadRune()
 	}
 
 	reader := csv.NewReader(br)
@@ -196,7 +192,6 @@ func LoadCSVColumn(filepath string, columnName string, reverse bool) ([]float64,
 		return nil, nil
 	}
 
-	// Find the column index by name
 	header := records[0]
 	columnIndex := -1
 	for i, col := range header {
@@ -207,33 +202,31 @@ func LoadCSVColumn(filepath string, columnName string, reverse bool) ([]float64,
 	}
 
 	if columnIndex == -1 {
-		return nil, nil // Column not found
+		return nil, nil
 	}
 
-	// Parse values from the column
 	var values []float64
 	for i := 1; i < len(records); i++ {
 		if columnIndex >= len(records[i]) {
-			continue // Skip rows with insufficient columns
+			continue
 		}
 
 		valueStr := records[i][columnIndex]
 		if valueStr == "" {
-			values = append(values, 50.0) // Use neutral value for missing data
+			values = append(values, 50.0)
 			continue
 		}
 
-		valueStr = strings.ReplaceAll(valueStr, ",", "") // Remove commas
+		valueStr = strings.ReplaceAll(valueStr, ",", "")
 		value, err := strconv.ParseFloat(valueStr, 64)
 		if err != nil {
-			values = append(values, 50.0) // Use neutral value for invalid data
+			values = append(values, 50.0)
 			continue
 		}
 
 		values = append(values, value)
 	}
 
-	// Reverse to get chronological order (oldest first) if requested
 	if reverse {
 		for i, j := 0, len(values)-1; i < j; i, j = i+1, j-1 {
 			values[i], values[j] = values[j], values[i]
@@ -243,8 +236,7 @@ func LoadCSVColumn(filepath string, columnName string, reverse bool) ([]float64,
 	return values, nil
 }
 
-// LoadLastCSVColumnRow reads the first data row (after header) from a specific column
-// This represents the "last" date chronologically before data reversal (oldest date)
+// LoadLastCSVColumnRow reads the first data row from a column
 func LoadLastCSVColumnRow(filepath string, columnName string) (string, error) {
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -252,14 +244,13 @@ func LoadLastCSVColumnRow(filepath string, columnName string) (string, error) {
 	}
 	defer file.Close()
 
-	// Skip BOM if present
 	br := bufio.NewReader(file)
 	r, _, err := br.ReadRune()
 	if err != nil {
 		return "", err
 	}
 	if r != '\uFEFF' {
-		br.UnreadRune() // Not a BOM, put it back
+		br.UnreadRune()
 	}
 
 	reader := csv.NewReader(br)
@@ -269,10 +260,9 @@ func LoadLastCSVColumnRow(filepath string, columnName string) (string, error) {
 	}
 
 	if len(records) < 2 {
-		return "", nil // Need at least header + one data row
+		return "", nil
 	}
 
-	// Find the column index by name
 	header := records[0]
 	columnIndex := -1
 	for i, col := range header {
@@ -283,19 +273,17 @@ func LoadLastCSVColumnRow(filepath string, columnName string) (string, error) {
 	}
 
 	if columnIndex == -1 {
-		return "", nil // Column not found
+		return "", nil
 	}
 
-	// Return the first data row value (row 1, after header at row 0)
 	if columnIndex >= len(records[1]) {
-		return "", nil // Column doesn't exist in first data row
+		return "", nil
 	}
 
 	return records[1][columnIndex], nil
 }
 
-// LoadFirstAndLastCSVDate reads both the first and last data row values from a specific column
-// Returns (firstRow, lastRow, error) - useful for date validation regardless of sort order
+// LoadFirstAndLastCSVDate reads first and last data row values
 func LoadFirstAndLastCSVDate(filepath string, columnName string) (string, string, error) {
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -303,14 +291,13 @@ func LoadFirstAndLastCSVDate(filepath string, columnName string) (string, string
 	}
 	defer file.Close()
 
-	// Skip BOM if present
 	br := bufio.NewReader(file)
 	r, _, err := br.ReadRune()
 	if err != nil {
 		return "", "", err
 	}
 	if r != '\uFEFF' {
-		br.UnreadRune() // Not a BOM, put it back
+		br.UnreadRune()
 	}
 
 	reader := csv.NewReader(br)
@@ -320,10 +307,9 @@ func LoadFirstAndLastCSVDate(filepath string, columnName string) (string, string
 	}
 
 	if len(records) < 2 {
-		return "", "", nil // Need at least header + one data row
+		return "", "", nil
 	}
 
-	// Find the column index by name
 	header := records[0]
 	columnIndex := -1
 	for i, col := range header {
@@ -334,12 +320,11 @@ func LoadFirstAndLastCSVDate(filepath string, columnName string) (string, string
 	}
 
 	if columnIndex == -1 {
-		return "", "", nil // Column not found
+		return "", "", nil
 	}
 
-	// Return first and last data row values
 	if columnIndex >= len(records[1]) || columnIndex >= len(records[len(records)-1]) {
-		return "", "", nil // Column doesn't exist in data rows
+		return "", "", nil
 	}
 
 	firstRowDateRaw := records[1][columnIndex]

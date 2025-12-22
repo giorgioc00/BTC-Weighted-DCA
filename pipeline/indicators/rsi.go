@@ -1,18 +1,16 @@
 package indicators
 
 // RSI calculates the Relative Strength Index for a given price series
-// period is typically 14
+// Returns a 0-100 score. Pure function: []float64 → []float64
 func RSI(prices []float64, period int) []float64 {
 	if len(prices) < period+1 {
 		return nil
 	}
 
 	rsi := make([]float64, len(prices))
-
-	// Initialize with neutral values for insufficient data points
 	fillSlice(rsi, 0, period, NeutralScore)
 
-	// STEP 1: Calculate price changes
+	// Calculate price changes
 	gains := make([]float64, len(prices))
 	losses := make([]float64, len(prices))
 
@@ -27,8 +25,8 @@ func RSI(prices []float64, period int) []float64 {
 		}
 	}
 
-	// STEP 2: Calculate initial average gain and loss (Simple Moving Average)
-	var avgPeriodGain, avgPeriodLoss float64 // for the last period
+	// Calculate initial average gain and loss
+	var avgPeriodGain, avgPeriodLoss float64
 	for i := 1; i <= period; i++ {
 		avgPeriodGain += gains[i]
 		avgPeriodLoss += losses[i]
@@ -36,14 +34,12 @@ func RSI(prices []float64, period int) []float64 {
 	avgPeriodGain /= float64(period)
 	avgPeriodLoss /= float64(period)
 
-	// STEP 3 & 4: Calculate RSI using smoothed moving average
+	// Calculate RSI using smoothed moving average
 	for i := period; i < len(prices); i++ {
-		// STEP 4: Apply smoothing for subsequent values (i > period)
 		if i > period {
 			avgPeriodGain = (avgPeriodGain*float64(period-1) + gains[i]) / float64(period)
 			avgPeriodLoss = (avgPeriodLoss*float64(period-1) + losses[i]) / float64(period)
 		}
-		// STEP 3: Calculate RSI (first at i=period uses initial averages)
 
 		if avgPeriodLoss == 0 {
 			rsi[i] = 100

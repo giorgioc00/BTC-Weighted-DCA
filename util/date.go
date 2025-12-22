@@ -7,13 +7,12 @@ import (
 )
 
 var dateLayouts = []string{
-	"2006-01-02", // ISO
-	"01/02/2006", // US-style month/day/year
-	"02/01/2006", // day/month/year
+	"2006-01-02",
+	"01/02/2006",
+	"02/01/2006",
 }
 
-// ParseDateFlexible tries multiple common layouts to parse a date string.
-// It trims quotes and whitespace before parsing.
+// ParseDateFlexible tries multiple layouts to parse a date string
 func ParseDateFlexible(dateStr string) (time.Time, error) {
 	clean := strings.TrimSpace(strings.Trim(dateStr, "\""))
 	for _, layout := range dateLayouts {

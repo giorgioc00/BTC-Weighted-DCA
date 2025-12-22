@@ -4,19 +4,20 @@ import (
 	"fmt"
 	"log"
 
-	"backtester/internal/infra/data"
-	"backtester/internal/infra/util"
-	"backtester/internal/usecase/engine"
-	"backtester/internal/usecase/strategy"
+	"backtester/data"
+	"backtester/pipeline/execution"
+	"backtester/pipeline/signals"
+	"backtester/util"
 )
 
 func main() {
-	// Load BTC price data from CSV
+	// Load price data
 	prices, firstPriceDate, err := data.LoadPricesFromCSV("data/btc_price.csv")
 	if err != nil {
 		log.Fatal("Error loading CSV:", err)
 	}
 
+	// Load additional market data
 	highs, err := util.LoadCSVColumn("data/btc_price.csv", "High", true)
 	if err != nil {
 		log.Fatal("Error loading High prices:", err)
@@ -30,7 +31,7 @@ func main() {
 		log.Fatal("Error loading Volumes:", err)
 	}
 
-	// Load MVRV data from CSV
+	// Load MVRV and flow data
 	mvrvData, err := util.LoadCSVColumn("data/btc_mvrv.csv", "CapMVRVCur", false)
 	if err != nil {
 		log.Printf("Warning: Could not load MVRV data: %v (using fallback)\n", err)
@@ -56,25 +57,29 @@ func main() {
 		fmt.Printf("MVRV data loaded: %d points\n", len(mvrvData))
 	}
 
-	// Configure the dynamic DCA strategy by reading the strategy_config.json
-	var config strategy.DCAConfig
+	// Load configuration
+	var config signals.Config
 	err = util.LoadJSONConfig("config/strategy_config.json", &config)
 	if err != nil {
 		log.Fatal("Error loading config: ", err)
 	}
 
-	strat := strategy.NewDynamicDCA(config)
-	strat.MVRVData = mvrvData
-	strat.FirstPriceDate = firstPriceDate
-	strat.Highs = highs
-	strat.Lows = lows
-	strat.Volumes = volumes
-	strat.FlowInUSD = flowIn
-	strat.FlowOutUSD = flowOut
+	// Prepare market data
+	marketData := signals.MarketData{
+		Prices:         prices,
+		Highs:          highs,
+		Lows:           lows,
+		Volumes:        volumes,
+		MVRVData:       mvrvData,
+		FlowInUSD:      flowIn,
+		FlowOutUSD:     flowOut,
+		FirstPriceDate: firstPriceDate,
+	}
 
-	// Create and run the backtester
-	runEngine := engine.NewEngine(strat)
-	result := runEngine.Run(prices)
+	// Run pipeline: data → signals → execution → metrics
+	sigs := signals.GenerateSignals(marketData, config)
+	trades := execution.Execute(sigs, config)
+	result := execution.CalculateResult(trades, prices[len(prices)-1])
 
 	if result == nil {
 		fmt.Println("Error: Could not run backtest")
@@ -87,12 +92,12 @@ func main() {
 	// Optional: Print trade history (uncomment to see all trades)
 	// result.PrintTrades()
 
-	// Compare with standard DCA (fixed amount)
+	// Compare with standard DCA
 	fmt.Println("\n--- Comparison with Standard DCA ---")
 	compareWithStandardDCA(prices, config.RSI.BaseAmount, 7)
 }
 
-// compareWithStandardDCA runs a simple fixed-amount DCA for comparison
+// compareWithStandardDCA runs fixed-amount DCA for comparison
 func compareWithStandardDCA(prices []float64, amount float64, interval int) {
 	var totalInvested, totalUnits float64
 
