@@ -7,6 +7,7 @@ import (
 	"backtester/data"
 	"backtester/pipeline/execution"
 	"backtester/pipeline/signals"
+	"backtester/report"
 	"backtester/util"
 )
 
@@ -59,7 +60,7 @@ func main() {
 
 	// Load configuration
 	var config signals.Config
-	err = util.LoadJSONConfig("config/strategy_config.json", &config)
+	err = util.LoadAndValidateJSONConfig("config/strategy_config.json", &config)
 	if err != nil {
 		log.Fatal("Error loading config: ", err)
 	}
@@ -87,21 +88,21 @@ func main() {
 	}
 
 	// Print results
-	result.PrintSummary()
+	report.PrintSummary(result)
 
 	// Optional: Print trade history (uncomment to see all trades)
-	// result.PrintTrades()
+	// report.PrintTrades(result)
 
 	// Compare with standard DCA
 	fmt.Println("\n--- Comparison with Standard DCA ---")
-	compareWithStandardDCA(prices, config.RSI.BaseAmount, 7)
+	compareWithStandardDCA(prices, config.RSI.BaseAmount, config.ExecutionInterval, config.RSI.RSIPeriod)
 }
 
 // compareWithStandardDCA runs fixed-amount DCA for comparison
-func compareWithStandardDCA(prices []float64, amount float64, interval int) {
+func compareWithStandardDCA(prices []float64, amount float64, interval int, warmupPeriod int) {
 	var totalInvested, totalUnits float64
 
-	for i := 14; i < len(prices); i += interval {
+	for i := warmupPeriod; i < len(prices); i += interval {
 		units := amount / prices[i]
 		totalUnits += units
 		totalInvested += amount
