@@ -7,17 +7,16 @@ CLI backtester for a dynamic DCA strategy combining multiple indicators (RSI, MA
 - `go test ./...` or `go test -race ./...` — run unit tests.
 - Data lives in `data/`:
   - `btc_price.csv` with `Date`, `Price`, `High`, `Low`, `Vol.` (newest-first; loaders reverse to oldest-first).
-  - `btc_mvrv.csv` with `CapMVRVCur`, `FlowInExUSD`, `FlowOutExUSD` (newest-first).
+  - `btc_mvrv.csv` with `CapMVRVCur`, `FlowInExUSD`, `FlowOutExUSD` (oldest-first).
 
 ## Architecture
-- `cmd/backtester/`: CLI entrypoint. Wires config, data loaders, and engine.
-- `internal/usecase/`:
-  - `engine/`: Executes signals, tracks trades/positions, prints summaries.
-  - `strategy/`: Dynamic DCA config, indicator weighting, signal generation.
-- `internal/domain/indicators/`: Pure indicator math and scoring helpers (RSI, MA200, Bollinger %B, ATR, MVRV mapping, net-flow z-score, volume-flow, utility functions).
-- `internal/infra/`:
-  - `data/`: Price loader with flexible date parsing.
-  - `util/`: CSV/JSON loaders, volume parsing (K/M/B), date parsing, config helpers.
+- `cmd/backtester/`: CLI entrypoint. Wires config, data loaders, and the pipeline.
+- `pipeline/indicators/`: Pure indicator math (`[]float64 -> []float64`) for RSI, MA200, Bollinger %B, ATR, MVRV mapping, net-flow z-score, volume-flow, and helpers.
+- `pipeline/signals/`: Aggregates market data, computes indicator scores, and produces `[]Signal` from `MarketData + Config`.
+- `pipeline/execution/`: Executes signals at configured intervals, producing `[]Trade` and computing results.
+- `pipeline/metrics/`: Holds result types; `report/` owns summary/trade printers.
+- `data/`: Price loader with flexible date parsing.
+- `util/`: CSV/JSON loaders, volume parsing (K/M/B), date parsing, config helpers.
 - `tests/`: External-package tests for indicators and util.
 
 ## Config
@@ -43,7 +42,7 @@ CLI backtester for a dynamic DCA strategy combining multiple indicators (RSI, MA
 
 ## Development Notes
 - Format with `gofmt -w .`; vet with `go vet ./...`.
-- Add new indicators under `internal/domain/indicators` and wire into `strategy.DynamicDCA.calculateAllIndicators` and `calculateScore`.
+- Add new indicators under `pipeline/indicators` and wire into `pipeline/signals.calculateAllIndicators` and `calculateScore`.
 - Place new tests under `tests/` mirroring package names; use `testdata/` for fixtures that differ from production.
 
 ## Limitations / Next Steps
