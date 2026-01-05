@@ -1,9 +1,8 @@
 package data
 
 import (
-	"time"
-
 	"backtester/util"
+	"time"
 )
 
 // LoadPricesFromCSV reads price data from CSV
